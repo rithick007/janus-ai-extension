@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Janus</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #F9FAFB; width: 380px; margin: 0; color: #1F2937; }
+        .container { padding: 24px; }
+        .hidden { display: none; }
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .header-icon { width: 40px; height: 40px; color: #6D28D9; }
+        .header-title { font-size: 24px; font-weight: 800; }
+        .task-textarea { width: 100%; padding: 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical; min-height: 100px; margin-bottom: 16px; }
+        .task-textarea:focus { outline: none; border-color: #6D28D9; box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.4); }
+        .btn { width: 100%; padding: 12px 16px; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.2s ease-in-out; }
+        .btn-primary { background-color: #6D28D9; color: white; border: 1px solid transparent; }
+        .btn-primary:hover { background-color: #5B21B6; box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.15); transform: translateY(-1px); }
+        .btn-secondary { background-color: transparent; color: #6D28D9; margin-top: 16px; border: 1px solid #6D28D9; }
+        .btn-secondary:hover { background-color: #F5F3FF; color: #5B21B6; }
+        .loading-container { text-align: center; padding: 40px 0; }
+        .spinner { width: 48px; height: 48px; border: 5px solid #E5E7EB; border-bottom-color: #6D28D9; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { margin-top: 16px; font-weight: 500; color: #4B5563; }
+        .results-header { font-size: 14px; font-weight: 500; color: #6B7280; margin-bottom: 4px; }
+        #identified-task { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+        #tool-list { display: flex; flex-direction: column; gap: 12px; }
+        .tool-card { display: block; background-color: white; padding: 16px; border-radius: 10px; border: 1px solid #E5E7EB; text-decoration: none; color: inherit; transition: all 0.2s ease-in-out; }
+        .tool-card:hover { border-color: #C4B5FD; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .tool-name { font-size: 18px; font-weight: 700; color: #6D28D9; margin-bottom: 8px; }
+        .tool-reason { font-size: 14px; color: #4B5563; line-height: 1.5; margin-bottom: 16px; }
+        .visit-site-link { display: flex; align-items: center; justify-content: flex-end; font-size: 14px; font-weight: 600; color: #5B21B6; text-decoration: none; }
+        .visit-site-link svg { width: 16px; height: 16px; margin-left: 6px; }
+        #error-message { background-color: #FEE2E2; color: #B91C1C; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; font-weight: 500; }
+        .ai-question { background-color: #F3F4F6; border-left: 4px solid #6D28D9; padding: 12px; margin-bottom: 16px; font-style: italic; color: #374151; border-radius: 0 8px 8px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" opacity="0.4"/>
+            </svg>
+            <h1 class="header-title">Janus</h1>
+        </header>
+
+        <main>
+            <!-- Error Message container -->
+            <div id="error-message" class="hidden"></div>
+            
+            <!-- STATE 1: INPUT -->
+            <div id="input-state">
+                <p style="margin-top: 0; margin-bottom: 12px; color: #4B5563;">Describe your goal or right-click selected text on any page.</p>
+                <textarea id="task-input" class="task-textarea" rows="4" placeholder="e.g., 'create a photorealistic image of a cat'"></textarea>
+            </div>
+            
+            <!-- STATE 2: LOADING -->
+            <div id="loading-state" class="hidden">
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                    <p class="loading-text">Consulting the digital oracle...</p>
+                </div>
+            </div>
+
+            <!-- STATE 3: CLARIFICATION -->
+            <div id="clarification-state" class="hidden">
+                <h3 class="results-header">Clarification Needed</h3>
+                <p id="ai-question" class="ai-question"></p>
+                <textarea id="clarification-input" class="task-textarea" rows="2" placeholder="Provide more detail here..."></textarea>
+            </div>
+
+            <!-- STATE 4: RESULTS -->
+            <div id="results-state" class="hidden">
+                <h3 class="results-header">Recommendations for:</h3>
+                <h2 id="identified-task"></h2>
+                <div id="tool-list"></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <button id="analyze-button" class="btn btn-primary">Analyze Task</button>
+            <button id="submit-clarification-button" class="btn btn-primary hidden">Submit</button>
+            <button id="reset-button" class="btn btn-secondary hidden">Start New Task</button>
+        </main>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
+
